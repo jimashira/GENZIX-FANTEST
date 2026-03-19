@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>GENZIX Fan Level Test</title>
+<style>
+body{
+  margin:0;
+  height:100vh;
+  font-family:"Comic Sans MS",cursive;
+  color:white;
+  overflow:hidden;
+  background:
+    linear-gradient(135deg,rgba(255,182,193,.4),rgba(255,105,180,.4)),
+    url("https://pbs.twimg.com/media/G_onNeObAAA8BAc?format=jpg&name=medium") center/cover no-repeat;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+}
+#startScreen{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  background:rgba(0,0,0,.5);
+}
+#game{max-width:420px; display:none;}
+#question{font-size:24px;margin:50px 0 20px 0;}
+button{
+  border:none;
+  padding:10px 18px;
+  margin:6px;
+  border-radius:20px;
+  background:linear-gradient(135deg,#ff9dcf,#ff69b4);
+  color:white;
+  cursor:pointer;
+  font-size:16px;
+  transition: all 0.2s ease;
+  box-shadow:0 3px 6px rgba(0,0,0,0.2);
+}
+button:hover{
+  transform:scale(1.1);
+  box-shadow:0 5px 10px rgba(0,0,0,0.3);
+}
+#meterBox{
+  width:100%;
+  height:12px;
+  background:rgba(255,255,255,.2);
+  border-radius:10px;
+  margin-bottom:15px;
+}
+#meter{
+  height:100%;
+  width:0%;
+  background:#ff3f8f;
+  border-radius:10px;
+  transition: width 0.3s ease;
+}
+#result{font-size:22px;margin-top:10px;}
+#card{
+  margin-top:15px;
+  background:rgba(0,0,0,0.4); /* darker glass */
+  backdrop-filter:blur(8px);
+  color:#ffffff; /* strong white text */
+  padding:14px;
+  border-radius:15px;
+  font-size:15px;
+  font-weight:bold;
+  text-align:center;
+  border:1px solid rgba(255,255,255,0.3);
+  box-shadow:0 4px 12px rgba(0,0,0,0.3);
+}
+#security{
+  position:absolute;
+  top:10px;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:20px;
+  font-weight:bold;
+  color:red;
+  display:none;
+}
+#angryBias{
+  position:absolute;
+  top:15px;
+  right:15px;
+  display:none;
+  align-items:center;
+  gap:6px;
+  animation: fadeIn 0.5s ease;
+}
+#angryBias img{
+  width:70px;
+  border-radius:10px;
+  border:2px solid white;
+}
+#emoji{font-size:26px;}
+@keyframes fadeIn{0%{opacity:0;}100%{opacity:1;}}
+
+/* Admin dot */
+#adminDot{
+  position:absolute;
+  top:5px;
+  left:5px;
+  width:15px;
+  height:15px;
+  background:#ff69b4;
+  border-radius:50%;
+  opacity:0.2;
+  cursor:pointer;
+  z-index:999;
+  transition: all 0.2s ease;
+}
+#adminDot:hover{ opacity:0.6; }
+
+/* Admin nickname list */
+#nicknameList{
+  position:absolute;
+  top:30px;
+  left:5px;
+  width:200px;
+  max-height:300px;
+  background:rgba(255,182,193,0.8);
+  border:2px solid #ff69b4;
+  border-radius:15px;
+  padding:10px;
+  font-size:14px;
+  color:white;
+  display:none;
+  overflow-y:auto;
+  box-shadow:0 4px 10px rgba(0,0,0,0.3);
+  z-index:999;
+}
+#nicknameList h4{
+  margin:0 0 5px 0;
+  font-size:16px;
+  text-align:center;
+}
+#nicknameList ul{ padding-left:15px; margin:0; list-style:disc; }
+</style>
+</head>
+<body>
+
+<div id="startScreen">
+  <h1>GENZIX Fan Level Test</h1>
+  <p>What's your name? 💖</p>
+  <input type="text" id="nicknameInput" placeholder="Enter your nickname">
+  <div id="readySection" style="display:none;">
+    <p>Are you ready?</p>
+    <button onclick="startGame()">Start</button>
+  </div>
+</div>
+
+<div id="game">
+  <div id="meterBox"><div id="meter"></div></div>
+  <div id="question"></div>
+  <div id="choices"></div>
+  <div id="result"></div>
+  <div id="card"></div>
+</div>
+
+<!-- Admin dot and nickname list -->
+<div id="adminDot" title="Click to see played nicknames"></div>
+<div id="nicknameList">
+  <h4>Players Already Played 💖</h4>
+  <ul id="playedNicknames"></ul>
+</div>
+
+<div id="angryBias">
+  <img id="biasPic">
+  <div id="emoji">😡</div>
+</div>
+
+<div id="security">SECURITYY!!!</div>
+
+<script>
+// MEMBER PHOTOS
+const photos={
+  kris:"https://pbs.twimg.com/media/HBU2wMcbcAIyYXc?format=jpg&name=large",
+  kiyo:"https://pbs.twimg.com/media/HBU3gdtbcAYf6HG?format=jpg&name=large",
+  jayu:"https://pbs.twimg.com/media/HBU4KvabcAMYaeV?format=jpg&name=large",
+  leo:"https://pbs.twimg.com/media/HBU4olYbEAArIff?format=jpg&name=large"
+}
+
+
+
+// ADMIN NICKNAMES
+let nicknames = JSON.parse(localStorage.getItem("playedNicknames")) || [];
+
+// UPDATE NICKNAME LIST
+function updateNicknameList(){
+  const ul = document.getElementById("playedNicknames");
+  ul.innerHTML="";
+  nicknames.forEach((n,index)=>{
+    const li = document.createElement("li");
+    const nameSpan = document.createElement("span");
+    nameSpan.textContent = n;
+
+    const removeBtn = document.createElement("button");
+    removeBtn.textContent="❌";
+    removeBtn.style.marginLeft="8px";
+    removeBtn.style.fontSize="10px";
+    removeBtn.style.padding="2px 6px";
+    removeBtn.style.borderRadius="10px";
+    removeBtn.style.cursor="pointer";
+    removeBtn.onclick = ()=>{ 
+      nicknames.splice(index,1);
+      localStorage.setItem("playedNicknames", JSON.stringify(nicknames));
+      updateNicknameList();
+    };
+
+    li.appendChild(nameSpan);
+    li.appendChild(removeBtn);
+    ul.appendChild(li);
+  });
+}
+
+// TOGGLE NICKNAME LIST
+document.getElementById("adminDot").onclick = function(){
+  const list = document.getElementById("nicknameList");
+  list.style.display = list.style.display==="block"?"none":"block";
+  updateNicknameList();
+}
+
+// GAME STATE
+let firstPick=null, confirmPick=false, round=0, qIndex=0, score=0, shuffledRounds=[];
+
+// QUESTIONS
+const originalRounds=[
+ [
+  {q:"Your bias waved.",a:[["Deadz",1],["Smile",1],["Stay calm",0]]},
+  {q:"GENZIX posts a selfie.",a:[["Like",1],["Comment a lot",1],["Scroll",0]]},
+  {q:"Friend mentions GENZIX.",a:[["Explain",0],["Show clip",1],["Talk about Genzix all day",1]]},
+  {q:"A new GENZIX Album drops.",a:[["Watch once",0],["Replay many times",1],["Share to all Group chats",2]]},
+  {q:"You hear GENZIX songs in public.",a:[["Ignore",0],["Vibe quietly",1],["Lip sync in dramatic way(🫣)",2]]},
+  {q:"Someone says they don’t know GENZIX.",a:[["Stay quiet",0],["Introduce them",1],["Show edits",1]]},
+  {q:"Bias posts a story.",a:[["React",1],["Screenshot and scream",2],["Skip",0]]},
+  {q:"GENZIX goes live.",a:[["Join immediately",1],["Watch later",0],["Send hearts",1]]},
+  {q:"Bias notices your comment.",a:[["SCREAM!!",2],["Stay calm",0],["Reply fast",1]]}
+],
+ [
+  {q:"Bias laughs on live.",a:[["Replay 100x (it’s for me)",1],["Screenshot like it’s our moment",1],["Smile like we have a secret",1]]},
+  {q:"New Music video drops.",a:[["Watch once (self-control era)",1],["Replay until I memorize everything",1],["Share everywhere like proud partner",2]]},
+  {q:"Song plays outside.",a:[["Sing quietly",1],["Dance like I’m in their MV",2],["Stay calm",0]]},
+  {q:"Bias looks at the camera.",a:[["Look away shyly",1],["Pause and stare back",1],["passed out’",1]]},
+  {q:"Bias posts at 2AM.",a:[["Sleeping",0],["Reply immediately",1],["Overthink why he’s awake",1]]},
+  {q:"Someone calls your bias cute.",a:[["Agree and introduce him more",1],["Say ‘I know right’",1],["Introduce another member(🥳)",2]]},
+  {q:"Bias says ‘I love you guys’.",a:[["I LOVE YOU TOO!!",3],["Act normal",0],["Take it personally 💀",1]]},
+  {q:"You dream about your bias.",a:[["Keep it to yourself",0],["Write it down",1],["POST IT ONLINE",1]]},
+  {q:"Bias wears your favorite color.",a:[["Coincidence",0],["Feel special",1],["Passed out",1]]},
+  {q:"Bias goes inactive suddenly.",a:[["Wait calmly",0],["Check updates",1],["Overthink + miss him instantly",1]]}
+],
+ [
+  {q:"Kriyo interaction on stage.",a:[["Smile normally",0],["Replay 50x",1],["‘They’re in love your honor’",2]]},
+  {q:"JaLeo stands next to each other.",a:[["Coincidence",0],["Notice chemistry",1],["‘They planned this’",1]]},
+  {q:"Cantonz eye contact moment.",a:[["Ignore",0],["Pause video",1],["Scream ‘TENSION!!’",2]]},
+  {q:"Jayu keep mentioning Leo.",a:[["Just listen",1],["THEY'RE GETTING MARRIED",1],["‘Why are you so obvious?’",1]]},
+  {q:"Cantonz laugh at the same time.",a:[["Cute",1],["Replay again",1],["‘Couple behavior’",1]]},
+  {q:"Leo and Jayu wear matching colors.",a:[["Coincidence",0],["Cute detail",1],["‘They coordinated this’",1]]},
+  {q:"Jayu post online, Kiyo goes online.",a:[["Normal",0],["Hmm interesting",1],["‘They’re talking right now’",1]]},
+  {q:"(Ship) A small touch happens.",a:[["Didn’t notice",0],["Replay slowly",1],["‘WHY SO INTIMATE?!’",1]]},
+  {q:"Your ship tease each other.",a:[["Funny",1],["Cute interaction",1],["‘That’s literally flirting’",1]]},
+  {q:"No interaction for a while.",a:[["Move on",0],["Wait patiently",1],["‘They’re hiding it’ 🤡",2]]}
+]
+];
+
+// SHUFFLE
+function shuffleArray(arr){
+  let array=[...arr];
+  for(let i=array.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [array[i],array[j]]=[array[j],array[i]];
+  }
+  return array;
+}
+function shuffleRounds(){ shuffledRounds = originalRounds.map(r=>shuffleArray(r)); }
+
+// SHOW READY BUTTON
+const nicknameInput = document.getElementById("nicknameInput");
+nicknameInput.addEventListener("input", ()=>{
+  document.getElementById("readySection").style.display = nicknameInput.value.trim() ? "block":"none";
+});
+
+// ENTER KEY START (fixed)
+nicknameInput.addEventListener("keydown",(e)=>{
+  if(e.key==="Enter" && nicknameInput.value.trim()){
+    e.preventDefault(); // prevent form submission / default
+    startGame();
+  }
+});
+
+// START GAME
+function startGame(){
+  const name = nicknameInput.value.trim();
+  if(!name) return;
+
+  if(!nicknames.includes(name)){
+    nicknames.push(name);
+    localStorage.setItem("playedNicknames", JSON.stringify(nicknames));
+  }
+  updateNicknameList();
+
+  document.getElementById("startScreen").style.display="none";
+  document.getElementById("game").style.display="block";
+
+  firstPick=null;
+  confirmPick=false;
+  round=0;
+  document.getElementById("angryBias").style.display="none";
+
+  shuffleRounds();
+  askBias();
+}
+
+// BIAS PICK
+function askBias(){
+  setQuestion("Who's your bias?");
+  setChoices(
+    '<button onclick="pickMember(\'kris\')">KRIS</button>'+
+    '<button onclick="pickMember(\'kiyo\')">KIYO</button>'+
+    '<button onclick="pickMember(\'jayu\')">JAYU</button>'+
+    '<button onclick="pickMember(\'leo\')">LEO</button>'
+  );
+}
+function pickMember(member){
+  if(!firstPick){ firstPick=member; confirmPick=true; setQuestion("Are you sure?"); return; }
+  if(confirmPick){
+    if(member!==firstPick){
+      document.getElementById("angryBias").style.display="flex";
+      document.getElementById("biasPic").src=photos[firstPick];
+      document.getElementById("emoji").innerText="😒";
+    }
+    startRound();
+  }
+}
+
+// ROUND
+function startRound(){ score=0; qIndex=0; document.getElementById("meterBox").style.display="block"; updateMeter(); loadQuestion(); }
+function loadQuestion(){
+  if(qIndex>=shuffledRounds[round].length){ showResult(); return; }
+  let q=shuffledRounds[round][qIndex];
+  setQuestion(q.q);
+  let html="";
+  q.a.forEach(a=>{ html+='<button onclick="answer('+a[1]+')">'+a[0]+'</button>'; });
+  setChoices(html);
+  qIndex++;
+}
+function answer(p){ score+=p; updateMeter(); loadQuestion(); }
+function updateMeter(){ document.getElementById("meter").style.width=(score*8)+"%"; }
+
+// ROUND RESULT
+function showResult(){
+  let text="", cardText="";
+
+  if(round===0) cardText="Being a fan is fun, but remember—GENZIX are real people too. Support them with respect, not pressure. >,<";
+  else if(round===1) cardText="Stay a fan, not obsessed. Respect GENZIX’s space—and yours too :)";
+  else cardText="Always remember your limits 🙂 Enjoy being a fan, but know your boundaries ✨";
+
+  // RESULT LABEL
+  if(round<2){
+    text = score<=3 ? "🌱 Calm Fan" : "⚡ Slightly Delulu";
+  } else {
+    if(score<=3) text="🌱 Calm Fan";
+    else if(score<=6) text="⚡ Slightly Delulu";
+    else text="🚨 GENZIX NEEDS TO HIDE";
+  }
+
+  // ✅ REMOVE QUESTION (THIS IS THE FIX)
+  document.getElementById("question").innerText="";
+
+  // SHOW RESULT
+  document.getElementById("result").innerHTML="<h2>"+text+"</h2>";
+  document.getElementById("card").innerText=cardText;
+
+  // SECURITY (only final round)
+  if(round===2){
+    document.getElementById("security").style.display="block";
+  } else {
+    document.getElementById("security").style.display="none";
+  }
+
+  // BUTTONS
+  if(round<2){
+    setChoices('<button onclick="nextRound()">Next Round</button>');
+  } else {
+    setChoices('<button onclick="bonus()">Bonus Question</button>');
+  }
+}
+
+function nextRound(){
+  round++; // go to next round
+
+  // reset UI
+  document.getElementById("result").innerHTML="";
+  document.getElementById("card").innerText="";
+  document.getElementById("question").innerText="";
+  document.getElementById("choices").innerHTML="";
+
+  // restart round
+  startRound(); document.getElementById("meter").style.width="0%";
+
+  // ✅ HIDE SECURITY TEXT
+  document.getElementById("security").style.display="none";
+}
+
+// BONUS
+function bonus(){
+  document.getElementById("meterBox").style.display="none";
+  document.getElementById("result").innerHTML="";
+  document.getElementById("card").innerText="";
+  document.getElementById("angryBias").style.display="none";
+  setQuestion("You see a fan go behind the members where fans aren't allowed. What will you do?");
+  setChoices(
+    '<button onclick="good()">Glare at her until she realizes it is wrong</button>'+
+    '<button onclick="bad()">Kick her</button>'+
+    '<button onclick="good()">Talk to her nicely</button>'
+  );
+}
+function good(){ setQuestion("Thank you for playing! Hope to see you at a GENZIX event soon 💖"); setChoices('<button onclick="restartGame()">Play Again</button>'); }
+function bad(){ setQuestion("Why are you like this 😭"); setChoices('<button onclick="restartGame()">Play Again</button>'); }
+
+// RESTART
+function restartGame(){
+  document.getElementById("game").style.display="none";
+  document.getElementById("startScreen").style.display="flex";
+
+  // ✅ HIDE SECURITY TEXT
+  document.getElementById("security").style.display="none";
+}
+
+// UTIL
+function setQuestion(t){ document.getElementById("question").innerText=t; }
+function setChoices(h){ document.getElementById("choices").innerHTML=h; }
+
+</script>
+</body>
+</html>
